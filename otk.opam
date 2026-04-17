@@ -11,6 +11,7 @@ depends: [
   "ocaml"   { >= "5.2" }
   "dune"    { >= "3.0" }
   "angstrom"
-  "alcotest" { with-test }
+  "alcotest"    { with-test }
+  "ocamlformat" { with-dev-setup }
 ]
 build: [ "dune" "build" "-p" name "-j" jobs ]

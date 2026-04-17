@@ -21,6 +21,16 @@ on:
       - ".github/workflows/ci.yml"
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2.0"
+      - run: opam install ocamlformat -y
+      - run: opam exec -- dune build @fmt --force
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
