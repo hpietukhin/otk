@@ -1,9 +1,14 @@
 # otk — ocaml token killer
 
-rewrites shell commands and filters output to save llm tokens. port of [rtk](https://github.com/rtk-ai/rtk).
+rewrites shell commands and filters output to save llm tokens. port of [rtk](https://github.com/rtk-ai/rtk) to save us all from Rust slop.
 
-**rewrites:** `git status` → porcelain summary · `git log` → oneline -20 · `git diff` → stat
-`pytest` → tb=short -q (auto uv) · `ls` → no noise dirs, max 50 lines · `cat` → squeeze blanks
+currently rewrites only handful of commands:
+`git status` → porcelain summary   
+· `git log` → oneline -20   
+· `git diff` → stat  
+`pytest` → tb=short -q (auto uv) 
+· `ls` → no noise dirs, max 50 lines 
+· `cat` → squeeze blanks  
 
 ## install
 
