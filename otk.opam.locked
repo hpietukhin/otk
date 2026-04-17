@@ -1,0 +1,32 @@
+opam-version: "2.0"
+name: "otk"
+version: "0.1.0"
+synopsis: "OCaml Token Killer — compact shell output for LLMs"
+depends: [
+  "alcotest" {= "1.9.1" & with-test}
+  "angstrom" {= "0.16.1"}
+  "astring" {= "0.8.5" & with-test}
+  "base-bigarray" {= "base"}
+  "base-domains" {= "base"}
+  "base-nnp" {= "base"}
+  "base-threads" {= "base"}
+  "base-unix" {= "base"}
+  "bigstringaf" {= "0.10.0"}
+  "cmdliner" {= "2.1.0" & with-test}
+  "csexp" {= "1.5.2"}
+  "dune" {= "3.22.2"}
+  "dune-configurator" {= "3.22.2"}
+  "fmt" {= "0.11.0" & with-test}
+  "ocaml" {= "5.2.0"}
+  "ocaml-base-compiler" {= "5.2.0"}
+  "ocaml-config" {= "3"}
+  "ocaml-options-vanilla" {= "1"}
+  "ocaml-syntax-shims" {= "1.0.0"}
+  "ocamlbuild" {= "0.16.1" & with-test}
+  "ocamlfind" {= "1.9.8" & with-test}
+  "re" {= "1.14.0" & with-test}
+  "stdlib-shims" {= "0.3.0" & with-test}
+  "topkg" {= "1.1.1" & with-test}
+  "uutf" {= "1.0.4" & with-test}
+]
+build: ["dune" "build" "-p" name "-j" jobs]

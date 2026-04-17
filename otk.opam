@@ -1,0 +1,11 @@
+opam-version: "2.0"
+name: "otk"
+version: "0.1.0"
+synopsis: "OCaml Token Killer — compact shell output for LLMs"
+depends: [
+  "ocaml"   { >= "5.2" }
+  "dune"    { >= "3.0" }
+  "angstrom"
+  "alcotest" { with-test }
+]
+build: [ "dune" "build" "-p" name "-j" jobs ]
