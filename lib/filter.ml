@@ -25,7 +25,8 @@ let ls_line_limit = 50
 (** Dirs whose content is noise for LLM context (mirrors rtk). *)
 let noise_dir_names =
   [ "node_modules"; ".git"; "target"; "__pycache__"; ".next"; "dist"
-  ; "build"; ".cache"; "coverage"; ".tox"; ".mypy_cache"; ".pytest_cache" ]
+  ; "build"; ".cache"; "coverage"; ".tox"; ".mypy_cache"; ".pytest_cache"
+  ; ".venv"; "venv"; ".direnv" ]
 
 (* ==== Shared Angstrom primitives ==== *)
 
