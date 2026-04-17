@@ -1,0 +1,16 @@
+output:
+  - success
+  - failure
+
+pre-commit:
+  jobs:
+    - name: ocamlformat
+      glob: "*.ml"
+      run: opam exec -- ocamlformat --inplace {staged_files}
+      stage_fixed: true
+      skip: rebase
+
+pre-push:
+  jobs:
+    - name: dune-test
+      run: opam exec -- dune test
