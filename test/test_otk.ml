@@ -195,6 +195,122 @@ let test_filter_ls_strips_noise_with_slash () =
     "node_modules/ gone" false
     (Filter.string_contains ~sub:"node_modules" result)
 
+(* ==== Command: go ==== *)
+
+let test_of_argv_go_test_adds_json () =
+  let _, args = Command.to_exec (Command.of_argv [ "go"; "test"; "./..." ]) in
+  Alcotest.(check bool) "-json added" true (List.mem "-json" args)
+
+let test_of_argv_go_test_no_duplicate_json () =
+  let _, args = Command.to_exec (Command.of_argv [ "go"; "test"; "-json"; "./..." ]) in
+  let count = List.length (List.filter (( = ) "-json") args) in
+  Alcotest.(check int) "-json appears once" 1 count
+
+let test_of_argv_go_build () =
+  Alcotest.(check (pair string (list string)))
+    "go build passthrough"
+    ("go", [ "build"; "./..." ])
+    (Command.to_exec (Command.of_argv [ "go"; "build"; "./..." ]))
+
+let test_of_argv_go_vet () =
+  Alcotest.(check (pair string (list string)))
+    "go vet passthrough"
+    ("go", [ "vet"; "./..." ])
+    (Command.to_exec (Command.of_argv [ "go"; "vet"; "./..." ]))
+
+(* ==== Filter.filter_go_test ==== *)
+
+let ndjson lines = String.concat "\n" lines
+
+let test_filter_go_test_all_pass () =
+  let raw =
+    ndjson
+      [ {|{"Action":"run","Package":"example.com/foo","Test":"TestBar"}|}
+      ; {|{"Action":"pass","Package":"example.com/foo","Test":"TestBar","Elapsed":0.5}|}
+      ; {|{"Action":"pass","Package":"example.com/foo","Elapsed":0.5}|}
+      ]
+  in
+  let result = Filter_go.filter_go_test raw in
+  Alcotest.(check bool) "passed" true (Filter.string_contains ~sub:"1 passed" result)
+
+let test_filter_go_test_with_failure () =
+  let raw =
+    ndjson
+      [ {|{"Action":"run","Package":"example.com/foo","Test":"TestFail"}|}
+      ; {|{"Action":"output","Package":"example.com/foo","Test":"TestFail","Output":"    Error: expected 5, got 3\n"}|}
+      ; {|{"Action":"fail","Package":"example.com/foo","Test":"TestFail","Elapsed":0.5}|}
+      ; {|{"Action":"fail","Package":"example.com/foo","Elapsed":0.5}|}
+      ]
+  in
+  let result = Filter_go.filter_go_test raw in
+  Alcotest.(check bool) "1 failed" true (Filter.string_contains ~sub:"1 failed" result);
+  Alcotest.(check bool) "test name" true (Filter.string_contains ~sub:"TestFail" result);
+  Alcotest.(check bool) "error msg" true
+    (Filter.string_contains ~sub:"expected 5, got 3" result)
+
+let test_filter_go_test_no_double_count () =
+  let raw =
+    ndjson
+      [ {|{"Action":"run","Package":"example.com/foo","Test":"TestFail"}|}
+      ; {|{"Action":"output","Package":"example.com/foo","Test":"TestFail","Output":"    Error: expected 5, got 3\n"}|}
+      ; {|{"Action":"fail","Package":"example.com/foo","Test":"TestFail","Elapsed":0.5}|}
+      ; {|{"Action":"fail","Package":"example.com/foo","Elapsed":0.5}|}
+      ]
+  in
+  let result = Filter_go.filter_go_test raw in
+  Alcotest.(check bool)
+    "header says 1 failed not 2" true
+    (Filter.string_contains ~sub:"Go test: 0 passed, 1 failed" result)
+
+let test_filter_go_test_no_tests () =
+  Alcotest.(check string)
+    "no tests found" "Go test: No tests found"
+    (Filter_go.filter_go_test "")
+
+let test_filter_go_test_timeout () =
+  let raw =
+    ndjson
+      [ {|{"Action":"start","Package":"example.com/foo"}|}
+      ; {|{"Action":"output","Package":"example.com/foo","Output":"*** Test killed with quit: ran too long (1m3s).\n"}|}
+      ; {|{"Action":"fail","Package":"example.com/foo","Elapsed":63.0}|}
+      ]
+  in
+  let result = Filter_go.filter_go_test raw in
+  Alcotest.(check bool) "1 failed" true
+    (Filter.string_contains ~sub:"1 failed" result);
+  Alcotest.(check bool) "timeout msg" true
+    (Filter.string_contains ~sub:"Test killed with quit" result)
+
+(* ==== Filter.filter_go_build ==== *)
+
+let test_filter_go_build_success () =
+  Alcotest.(check string) "success" "Go build: Success" (Filter_go.filter_go_build "")
+
+let test_filter_go_build_errors () =
+  let raw = "# example.com/foo\nmain.go:10:5: undefined: missingFunc\nmain.go:15:2: cannot use x" in
+  let result = Filter_go.filter_go_build raw in
+  Alcotest.(check bool) "2 errors" true (Filter.string_contains ~sub:"2 errors" result);
+  Alcotest.(check bool) "undefined" true
+    (Filter.string_contains ~sub:"undefined: missingFunc" result)
+
+let test_filter_go_build_ignores_downloads () =
+  let raw =
+    "go: downloading github.com/pkg/errors v0.9.1\ngo: finding module for package example.com/foo"
+  in
+  Alcotest.(check string) "no errors" "Go build: Success" (Filter_go.filter_go_build raw)
+
+(* ==== Filter.filter_go_vet ==== *)
+
+let test_filter_go_vet_no_issues () =
+  Alcotest.(check string) "clean" "Go vet: No issues found" (Filter_go.filter_go_vet "")
+
+let test_filter_go_vet_with_issues () =
+  let raw = "main.go:42:2: Printf format %d has arg x of wrong type string\nutils.go:15:5: unreachable code" in
+  let result = Filter_go.filter_go_vet raw in
+  Alcotest.(check bool) "2 issues" true (Filter.string_contains ~sub:"2 issues" result);
+  Alcotest.(check bool) "Printf issue" true
+    (Filter.string_contains ~sub:"Printf format" result)
+
 (* ==== Suite ==== *)
 
 let command_tests =
@@ -206,6 +322,10 @@ let command_tests =
     ("git log respects user format", `Quick, test_of_argv_git_log_respects_user_format);
     ("git diff adds --stat", `Quick, test_of_argv_git_diff_adds_stat);
     ("git diff no duplicate --stat", `Quick, test_of_argv_git_diff_no_duplicate_stat);
+    ("go test adds -json", `Quick, test_of_argv_go_test_adds_json);
+    ("go test no duplicate -json", `Quick, test_of_argv_go_test_no_duplicate_json);
+    ("go build passthrough", `Quick, test_of_argv_go_build);
+    ("go vet passthrough", `Quick, test_of_argv_go_vet);
     ("pytest defaults", `Quick, test_of_argv_pytest_defaults);
     ("pytest no duplicate --tb", `Quick, test_of_argv_pytest_no_duplicate_tb);
     ("cat adds -s", `Quick, test_of_argv_cat_adds_squeeze);
@@ -243,6 +363,28 @@ let ls_tests =
     ("strips noise dirs (slash)", `Quick, test_filter_ls_strips_noise_with_slash);
   ]
 
+let go_test_tests =
+  [
+    ("all pass", `Quick, test_filter_go_test_all_pass);
+    ("with failure", `Quick, test_filter_go_test_with_failure);
+    ("no double count on pkg-level fail", `Quick, test_filter_go_test_no_double_count);
+    ("no tests found", `Quick, test_filter_go_test_no_tests);
+    ("timeout package fail", `Quick, test_filter_go_test_timeout);
+  ]
+
+let go_build_tests =
+  [
+    ("success", `Quick, test_filter_go_build_success);
+    ("shows errors", `Quick, test_filter_go_build_errors);
+    ("ignores download lines", `Quick, test_filter_go_build_ignores_downloads);
+  ]
+
+let go_vet_tests =
+  [
+    ("no issues", `Quick, test_filter_go_vet_no_issues);
+    ("with issues", `Quick, test_filter_go_vet_with_issues);
+  ]
+
 let () =
   Alcotest.run "otk"
     [
@@ -251,4 +393,7 @@ let () =
       ("Filter.filter_git_status", git_status_tests);
       ("Filter.filter_pytest", pytest_tests);
       ("Filter.filter_ls", ls_tests);
+      ("Filter_go.filter_go_test", go_test_tests);
+      ("Filter_go.filter_go_build", go_build_tests);
+      ("Filter_go.filter_go_vet", go_vet_tests);
     ]

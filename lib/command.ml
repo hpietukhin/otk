@@ -2,9 +2,11 @@
     effects. *)
 
 type git_cmd = Status | Log | Diff
+type go_subcmd = Test | Build | Vet | GoOther
 
 type t =
   | Git of git_cmd * string list
+  | Go of go_subcmd * string list
   | Pytest of string list
   | Ls of string list
   | Cat of string list
@@ -14,6 +16,10 @@ let of_argv = function
   | "git" :: "status" :: rest -> Git (Status, rest)
   | "git" :: "log" :: rest -> Git (Log, rest)
   | "git" :: "diff" :: rest -> Git (Diff, rest)
+  | "go" :: "test" :: rest -> Go (Test, rest)
+  | "go" :: "build" :: rest -> Go (Build, rest)
+  | "go" :: "vet" :: rest -> Go (Vet, rest)
+  | "go" :: rest -> Go (GoOther, rest)
   | "pytest" :: rest -> Pytest rest
   | "ls" :: rest -> Ls rest
   | "cat" :: rest -> Cat rest
@@ -71,6 +77,12 @@ let to_exec = function
         |> ensure_unless "-q" has_quiet_flag
       in
       ("pytest", args)
+  | Go (Test, user_args) ->
+      let args = ensure_unless "-json" (List.mem "-json") user_args in
+      ("go", "test" :: args)
+  | Go (Build, user_args) -> ("go", "build" :: user_args)
+  | Go (Vet, user_args) -> ("go", "vet" :: user_args)
+  | Go (GoOther, user_args) -> ("go", user_args)
   | Ls user_args -> ("ls", user_args)
   | Cat user_args -> ("cat", ensure_unless "-s" (List.mem "-s") user_args)
   | Passthrough (cmd, user_args) -> (cmd, user_args)

@@ -3,24 +3,32 @@ open Otk
 let version = "0.1.0"
 
 let usage () =
-  Printf.printf "otk %s — OCaml Token Killer\n\n" version;
-  Printf.printf "Usage: otk <command> [args...]\n\n";
-  Printf.printf "Supported filters:\n";
-  Printf.printf "  git status  → git status --porcelain -b\n";
-  Printf.printf "  git log     → git log --oneline --no-merges -20\n";
-  Printf.printf "  git diff    → git diff --stat\n";
-  Printf.printf "  pytest      → pytest --tb=short -q  (uv run if uv.lock present)\n";
-  Printf.printf "  ls          → noise-filtered, truncate to 50 lines\n";
-  Printf.printf "  cat         → cat -s (squeeze blank lines)\n";
-  Printf.printf "  <other>     → passthrough unchanged\n"
+  Printf.printf
+    {|otk %s — OCaml Token Killer
+
+Usage: otk <command> [args...]
+
+Supported filters:
+  git status  → git status --porcelain -b
+  git log     → git log --oneline --no-merges -20
+  git diff    → git diff --stat
+  go test     → go test -json  (compact pass/fail summary)
+  go build    → errors only
+  go vet      → issues only
+  go <other>  → passthrough unchanged
+  pytest      → pytest --tb=short -q  (uv run if uv.lock present)
+  ls          → noise-filtered, truncate to 50 lines
+  cat         → cat -s (squeeze blank lines)
+  <other>     → passthrough unchanged
+|}
+    version
 
 let run_command argv =
   let cmd = Command.of_argv argv in
   let exec, args = Command.to_exec cmd in
   let exec, args = Runner.resolve exec args in
   let exit_code, stdout, stderr = Runner.run exec args in
-  if Filter.string_contains ~sub:"not a git repository" stderr then (
-    (* Clean up git's verbose error *)
+  if Util.string_contains ~sub:"not a git repository" stderr then (
     prerr_string "Not a git repository\n";
     exit_code)
   else begin
