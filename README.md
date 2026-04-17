@@ -26,8 +26,10 @@ opam install . --deps-only --locked && dune build
 to update the lock file: `opam lock .` and commit `otk.opam.locked`.
 
 ## opencode
-copy `hooks/opencode/otk.ts` → `~/.config/opencode/plugins/otk.ts`
-add to `~/.config/opencode/opencode.json`: `{ "plugin": ["file:///~/.config/opencode/plugins/otk.ts"] }`
+```sh
+cp hooks/opencode/otk.ts ~/.config/opencode/plugins/otk.ts
+echo '{ "plugin": ["file:///'"$HOME"'/.config/opencode/plugins/otk.ts"] }' > ~/.config/opencode/opencode.json
+```
 
 ## usage
 `otk git status` — run and filter · `otk rewrite git status` — print rewrite only
